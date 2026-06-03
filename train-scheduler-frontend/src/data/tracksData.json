@@ -1,0 +1,91 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "New Delhi - Kolkata",
+        "name": "New Delhi to Kolkata Route"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [77.2090, 28.6139],
+          [78.0880, 27.8974],
+          [80.3319, 26.4499],
+          [81.8463, 25.4358],
+          [83.1163, 25.2797],
+          [85.0002, 24.7955],
+          [86.4304, 23.7915],
+          [86.9535, 23.6821],
+          [88.3639, 22.5726]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "New Delhi - Mumbai",
+        "name": "New Delhi to Mumbai Route"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [77.2090, 28.6139],
+          [77.6737, 27.4924],
+          [75.8391, 25.1825],
+          [75.0367, 23.3315],
+          [73.1812, 22.3072],
+          [72.8311, 21.1702],
+          [72.8777, 19.0760]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "Kalka - Shimla",
+        "name": "Kalka to Shimla Route"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [76.9388, 30.8354],
+          [77.1734, 31.1048]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "New Delhi - Lucknow",
+        "name": "New Delhi to Lucknow Route"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [77.2090, 28.6139],
+          [78.0880, 27.8974],
+          [80.9462, 26.8467]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "Kolkata - Pune",
+        "name": "Kolkata to Pune Route"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [88.3639, 22.5726],
+          [81.6296, 21.2514], 
+          [79.0882, 21.1458], 
+          [75.3236, 19.8762], 
+          [73.8567, 18.5204]
+        ]
+      }
+    }
+  ]
+}
