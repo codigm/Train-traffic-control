@@ -14,6 +14,9 @@ import java.util.Objects;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import jakarta.annotation.PostConstruct;
 
 @Service
 public class ReservationService {
@@ -21,6 +24,8 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final TrackRepository trackRepository;
     private final TrainRepository trainRepository;
+
+    private final Map<String, List<Reservation>> reservationCache = new ConcurrentHashMap<>();
 
     public ReservationService(ReservationRepository reservationRepository,
                               TrackRepository trackRepository,
@@ -30,8 +35,24 @@ public class ReservationService {
         this.trainRepository = trainRepository;
     }
 
+    @PostConstruct
+    public void loadCache() {
+        reservationCache.clear();
+        for (Reservation r : reservationRepository.findAll()) {
+            reservationCache.computeIfAbsent(r.getTrackSectionId(), k -> new ArrayList<>()).add(r);
+        }
+    }
+
     public List<Reservation> findOverlapping(String trackId, LocalDateTime start, LocalDateTime end) {
-        return reservationRepository.findByTrackSectionIdAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(trackId, end, start);
+        List<Reservation> all = reservationCache.getOrDefault(trackId, new ArrayList<>());
+        List<Reservation> overlaps = new ArrayList<>();
+        for (Reservation r : all) {
+            // Note: End time overlaps if r.startTime < end && r.endTime > start
+            if (r.getStartTime().isBefore(end) && r.getEndTime().isAfter(start)) {
+                overlaps.add(r);
+            }
+        }
+        return overlaps;
     }
 
     public int getCapacity(@NonNull String trackId) {
@@ -47,6 +68,17 @@ public class ReservationService {
                 return false; // must wait for higher-priority train
             }
         }
+        // Also check if reverse track is locked for SINGLE tracks
+        if (track.getTrackType() == Track.TrackType.SINGLE) {
+            Track reverseTrack = trackRepository.findByFromStationAndToStation(track.getToStation(), track.getFromStation()).orElse(null);
+            if (reverseTrack != null) {
+                List<Reservation> reverseOverlaps = findOverlapping(reverseTrack.getId(), start, end);
+                if (!reverseOverlaps.isEmpty()) {
+                    return false; // Cannot reserve if a train is coming head-on
+                }
+            }
+        }
+
         return overlaps.size() < track.getCapacity();
     }
 
@@ -72,7 +104,8 @@ public class ReservationService {
             if (track == null) continue;
 
             LocalDateTime start = seg.getStartTime().plusMinutes(accumulatedDelayMinutes);
-            LocalDateTime end = seg.getEndTime().plusMinutes(accumulatedDelayMinutes);
+            // Add safeGapTime to the end to ensure headway buffer
+            LocalDateTime end = seg.getEndTime().plusMinutes(accumulatedDelayMinutes).plusMinutes(track.getSafeGapTimeMinutes());
 
             boolean reserved = false;
             int maxRetries = 5;
@@ -85,10 +118,28 @@ public class ReservationService {
                     r.setStartTime(start);
                     r.setEndTime(end);
                     r.setPlanId(planId);
-                    created.add(reservationRepository.save(r));
+                    Reservation saved = reservationRepository.save(r);
+                    created.add(saved);
+                    reservationCache.computeIfAbsent(track.getId(), k -> new ArrayList<>()).add(saved);
+
+                    // Add reverse lock for SINGLE track
+                    if (track.getTrackType() == Track.TrackType.SINGLE) {
+                        Track reverseTrack = trackRepository.findByFromStationAndToStation(track.getToStation(), track.getFromStation()).orElse(null);
+                        if (reverseTrack != null) {
+                            Reservation rr = new Reservation();
+                            rr.setTrackSectionId(reverseTrack.getId());
+                            rr.setTrainId(trainId);
+                            rr.setStartTime(start);
+                            rr.setEndTime(end);
+                            rr.setPlanId(planId);
+                            Reservation savedRev = reservationRepository.save(rr);
+                            created.add(savedRev);
+                            reservationCache.computeIfAbsent(reverseTrack.getId(), k -> new ArrayList<>()).add(savedRev);
+                        }
+                    }
                     
                     seg.setStartTime(start);
-                    seg.setEndTime(end);
+                    seg.setEndTime(end.minusMinutes(track.getSafeGapTimeMinutes())); // segment actual exit time doesn't include gap
                     
                     reserved = true;
                     break;
@@ -109,6 +160,7 @@ public class ReservationService {
     public void cancelReservationsForPlan(String planId) {
         List<Reservation> list = reservationRepository.findByPlanId(planId);
         reservationRepository.deleteAll(Objects.requireNonNull(list));
+        loadCache(); // Re-sync cache after deletion
     }
 
     public void holdTrainAt(Track track, Train train, LocalDateTime holdUntil) {

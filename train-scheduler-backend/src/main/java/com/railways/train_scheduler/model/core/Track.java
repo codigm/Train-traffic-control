@@ -18,6 +18,8 @@ public class Track {
     private int maxSpeedKmph;
     private TrackType trackType;
     private boolean isOperational = true;
+    private int safeGapTimeMinutes = 2; // Headway buffer
+    private double baseCongestionLevel = 0.0; // 0.0 to 1.0
 
     // Constructors
     public Track() {}
@@ -26,6 +28,8 @@ public class Track {
         this.capacity = capacity; this.distanceKm = distanceKm; this.travelTime = travelTime;
         this.maxSpeedKmph = maxSpeedKmph; this.trackType = trackType;
         this.isOperational = true;
+        this.safeGapTimeMinutes = 2;
+        this.baseCongestionLevel = 0.0;
     }
 
     // Getters & Setters
@@ -55,6 +59,12 @@ public class Track {
 
     public boolean isOperational() { return isOperational; }
     public void setOperational(boolean operational) { isOperational = operational; }
+
+    public int getSafeGapTimeMinutes() { return safeGapTimeMinutes; }
+    public void setSafeGapTimeMinutes(int safeGapTimeMinutes) { this.safeGapTimeMinutes = safeGapTimeMinutes; }
+
+    public double getBaseCongestionLevel() { return baseCongestionLevel; }
+    public void setBaseCongestionLevel(double baseCongestionLevel) { this.baseCongestionLevel = baseCongestionLevel; }
 
     @Override
     public String toString() {

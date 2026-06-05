@@ -17,11 +17,13 @@ public class EmergencyHandlingService {
     private final TrackRepository trackRepository;
     private final EventRepository eventRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final com.railways.train_scheduler.service.ai.DynamicRescheduler dynamicRescheduler;
 
-    public EmergencyHandlingService(TrackRepository trackRepository, EventRepository eventRepository, SimpMessagingTemplate messagingTemplate) {
+    public EmergencyHandlingService(TrackRepository trackRepository, EventRepository eventRepository, SimpMessagingTemplate messagingTemplate, com.railways.train_scheduler.service.ai.DynamicRescheduler dynamicRescheduler) {
         this.trackRepository = trackRepository;
         this.eventRepository = eventRepository;
         this.messagingTemplate = messagingTemplate;
+        this.dynamicRescheduler = dynamicRescheduler;
     }
 
     public Event reportEmergency(@NonNull String trackId, String eventType, String description) {
@@ -29,7 +31,10 @@ public class EmergencyHandlingService {
         
         if (optionalTrack.isPresent()) {
             Track track = optionalTrack.get();
-            track.setOperational(false);
+            // Don't shut down the track completely if it's just weather, speed restrictions are handled by AI
+            if (!eventType.equals("SEVERE_WEATHER")) {
+                track.setOperational(false);
+            }
             trackRepository.save(track);
         }
 
@@ -41,6 +46,10 @@ public class EmergencyHandlingService {
         
         Event savedEvent = eventRepository.save(event);
         messagingTemplate.convertAndSend("/topic/emergencies", savedEvent);
+        
+        // Trigger AI dynamic recalculation for any trains scheduled to pass this broken track
+        dynamicRescheduler.recalculateAffectedTrains(trackId);
+        
         return savedEvent;
     }
 
