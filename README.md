@@ -50,7 +50,7 @@ The backend is a robust Java service responsible for heavy computations, state m
 3. Build and run the Spring Boot application:
    ```bash
    mvn clean install
-   mvn spring-boot:run
+   .\mvnw.cmd spring-boot:run
    ```
    *The backend will start on `http://localhost:8080`.*
 
